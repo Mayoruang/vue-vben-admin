@@ -1,132 +1,145 @@
-# 无人机管理系统 - 开发环境
+# 无人机管理系统 (Drone Management System)
 
-这是一套基于Web的无人机管理系统开发环境配置，用于在本地（Mac）环境一键部署与开发，面向毕业设计阶段的功能验证。
+一个功能全面的无人机管理系统，支持无人机监控、数据收集和分析。
 
-## 系统组件
+## 系统架构
 
-- **前端**：基于Vue3/Vue-vben-admin的管理后台
-- **后端**：Spring Boot提供REST和MQTT客户端服务
-- **消息中间件**：EMQX Enterprise 5.8.6
-- **数据库**：
-  - PostgreSQL 16.0 (关系型数据库)
-  - InfluxDB 2.7 (时序数据库)
+系统由以下组件构成：
 
-## 开发环境设置
+1. **后端服务**：基于Spring Boot的REST API
+2. **前端界面**：基于Vue-vben-admin的管理控制台
+3. **数据存储**：
+   - PostgreSQL：关系型数据（用户、权限、无人机信息等）
+   - InfluxDB：时序数据（无人机遥测数据）
+4. **消息通信**：
+   - EMQX：MQTT消息代理，用于与无人机通信
 
-### 前提条件
+## 快速开始
 
-- Docker & Docker Compose
-- Java 17
-- Node.js & npm
-- pnpm
-- Git
+### 前置条件
 
-### 启动开发环境
+- Docker 和 Docker Compose
+- Java 17 或更高版本
+- Node.js 16 或更高版本
+- Maven 3.8 或更高版本
 
-1. 启动后台服务（PostgreSQL、InfluxDB、EMQX）：
+### 环境启动
+
+1. 启动所有基础服务：
 
 ```bash
-./start-dev.sh
+docker-compose up -d
 ```
 
-2. 开发后端（Spring Boot）：
+2. 启动后端服务：
 
 ```bash
 cd backend
 ./mvnw spring-boot:run
 ```
 
-3. 开发前端（Vue-vben-admin）：
+3. 启动前端服务：
 
 ```bash
-cd vue-vben-admin
-npm i -g corepack  # 如果未安装
-pnpm install
-pnpm dev:antd
+cd frontend
+npm install
+npm run dev
 ```
 
-### 停止开发环境
+### 默认账号
 
-```bash
-./stop-dev.sh
-```
+系统预设了以下测试账号：
 
-## 服务访问信息
+| 用户名 | 密码 | 角色 |
+|-------|------|------|
+| admin | 123456 | 管理员 |
+| operator | 123456 | 操作员 |
+| guest | 123456 | 访客 |
+| vben | 123456 | 超级管理员 |
 
-- **PostgreSQL**: localhost:5432
-  - 用户名: drone
-  - 密码: dronepassword
-  - 数据库: dronedb
+## 主要功能
 
-- **InfluxDB**: http://localhost:8086
-  - 用户名: admin
-  - 密码: influxdb123
-  - 组织: drone_org
-  - Token: my-super-secret-token
+### 用户管理
+- 用户认证与授权
+- 基于角色的权限控制
+- JWT令牌认证
 
-- **EMQX控制台**: http://localhost:18083
-  - 用户名: admin
-  - 密码: public
+### 无人机管理
+- 无人机信息管理
+- 实时监控无人机状态
+- 无人机操作控制
 
-- **后端API**: http://localhost:8080
+### 数据分析
+- 遥测数据收集
+- 数据可视化
+- 数据导出
 
-- **前端开发服务器**: http://localhost:3100
+## 开发指南
 
-## Git版本管理
+### 后端开发
 
-### 初始设置
+后端基于Spring Boot框架开发，主要包含以下模块：
 
-首次克隆后，使用以下命令初始化并推送到您的GitHub仓库：
+- `auth`: 认证与授权
+- `drone`: 无人机管理
+- `telemetry`: 遥测数据处理
+- `analysis`: 数据分析
 
-```bash
-./setup-git.sh
-```
+### 前端开发
 
-脚本会引导您完成仓库初始化和推送过程。
+前端基于Vue-vben-admin，主要包含以下模块：
 
-### 日常Git操作
+- 认证管理
+- 无人机管理界面
+- 数据可视化界面
+- 系统管理
 
-1. 查看更改状态：
-```bash
-git status
-```
-
-2. 添加更改到暂存区：
-```bash
-git add .
-```
-
-3. 提交更改：
-```bash
-git commit -m "提交描述"
-```
-
-4. 推送到GitHub：
-```bash
-git push
-```
-
-5. 获取最新更改：
-```bash
-git pull
-```
-
-## 代码结构
+## 系统架构图
 
 ```
-drone9/
-├── backend/               # Spring Boot后端服务
-├── vue-vben-admin/        # Vue3前端项目
-├── docker-compose.yml     # Docker服务配置
-├── start-dev.sh           # 开发环境启动脚本
-├── stop-dev.sh            # 开发环境停止脚本
-└── setup-git.sh           # Git仓库初始化脚本
++---------------+      +-------------+
+|               |      |             |
+|   Frontend    |<---->|   Backend   |
+|  (Vue Admin)  |      | (Spring Boot)|
+|               |      |             |
++---------------+      +------+------+
+                              |
+                              |
+              +---------------+----------------+
+              |               |                |
+     +--------v-----+  +------v-------+  +-----v------+
+     |              |  |              |  |            |
+     |  PostgreSQL  |  |   InfluxDB   |  |    EMQX    |
+     |  (Relational)|  | (Time-Series)|  |   (MQTT)   |
+     |              |  |              |  |            |
+     +--------------+  +--------------+  +------------+
 ```
 
-## 系统功能
+## API文档
 
-- 无人机注册：通过MQTT+REST接口实现设备上线登记
-- 实时遥测：无人机定时发布位置、速度、电量等数据
-- 指令交互：平台向指定主题下发飞行或导航命令
-- 地理展示：前端集成百度地图API，可视化展示无人机位置和轨迹
-- 围栏管理：通过地理围栏限制飞行区域，触发预警或指令下达 
+系统API文档可通过以下方式访问：
+
+- Swagger UI: http://localhost:8080/swagger-ui.html
+
+## 健康检查
+
+系统集成了全面的健康检查机制，确保各组件正常工作：
+
+- 后端健康检查: http://localhost:8080/management/health
+- 数据库连接测试
+- MQTT连接测试
+- InfluxDB连接测试
+
+## 故障排除
+
+### 后端启动失败
+
+1. 检查数据库连接是否正确
+2. 检查端口是否被占用
+3. 查看日志文件: `backend/logs/drone-management.log`
+
+### 前端启动失败
+
+1. 检查Node.js版本
+2. 清除依赖并重新安装: `rm -rf node_modules && npm install`
+3. 检查配置文件中的API路径 
