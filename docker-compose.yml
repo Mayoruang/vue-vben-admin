@@ -1,0 +1,84 @@
+version: '3.8'
+
+services:
+  # PostgreSQL 数据库
+  postgres:
+    image: postgres:16.0
+    container_name: drone-postgres
+    environment:
+      POSTGRES_DB: dronedb
+      POSTGRES_USER: drone
+      POSTGRES_PASSWORD: dronepassword
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  # InfluxDB 时序数据库
+  influxdb:
+    image: influxdb:2.7
+    container_name: drone-influxdb
+    environment:
+      DOCKER_INFLUXDB_INIT_MODE: setup
+      DOCKER_INFLUXDB_INIT_USERNAME: admin
+      DOCKER_INFLUXDB_INIT_PASSWORD: influxdb123
+      DOCKER_INFLUXDB_INIT_ORG: drone_org
+      DOCKER_INFLUXDB_INIT_BUCKET: drone_data
+      DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: my-super-secret-token
+    ports:
+      - "8086:8086"
+    volumes:
+      - influxdb_data:/var/lib/influxdb2
+    restart: unless-stopped
+
+  # EMQX 消息代理
+  emqx:
+    image: emqx/emqx-enterprise:5.8.6
+    container_name: drone-emqx
+    ports:
+      - "1883:1883"   # MQTT
+      - "8083:8083"   # MQTT/WS
+      - "8084:8084"   # MQTT/WSS
+      - "8883:8883"   # MQTT/SSL
+      - "18083:18083" # Dashboard
+    volumes:
+      - emqx_data:/opt/emqx/data
+      - emqx_log:/opt/emqx/log
+    environment:
+      EMQX_NAME: drone-emqx
+      EMQX_DASHBOARD__DEFAULT_USERNAME: admin
+      EMQX_DASHBOARD__DEFAULT_PASSWORD: public
+    restart: unless-stopped
+
+  # Spring Boot 后端 - 开发模式（使用本地代码）
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    container_name: drone-backend
+    depends_on:
+      - postgres
+      - influxdb
+      - emqx
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./backend:/app
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/dronedb
+      SPRING_DATASOURCE_USERNAME: drone
+      SPRING_DATASOURCE_PASSWORD: dronepassword
+      INFLUXDB_URL: http://influxdb:8086
+      INFLUXDB_TOKEN: my-super-secret-token
+      INFLUXDB_ORG: drone_org
+      INFLUXDB_BUCKET: drone_data
+      MQTT_BROKER_URL: tcp://emqx:1883
+    restart: unless-stopped
+    # 开发模式，不直接启动，仅提供环境
+
+volumes:
+  postgres_data:
+  influxdb_data:
+  emqx_data:
+  emqx_log: 
