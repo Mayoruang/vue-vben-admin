@@ -25,6 +25,27 @@
 
 ### 环境启动
 
+方式一：使用管理脚本（推荐）
+
+```bash
+# 给脚本添加执行权限
+chmod +x drone9.sh
+
+# 启动所有服务
+./drone9.sh start
+
+# 查看服务状态
+./drone9.sh status
+
+# 停止所有服务
+./drone9.sh stop
+
+# 查看所有可用命令
+./drone9.sh help
+```
+
+方式二：手动启动各组件
+
 1. 启动所有基础服务：
 
 ```bash
@@ -41,7 +62,7 @@ cd backend
 3. 启动前端服务：
 
 ```bash
-cd frontend
+cd vue-vben-admin
 npm install
 npm run dev
 ```
@@ -73,6 +94,33 @@ npm run dev
 - 遥测数据收集
 - 数据可视化
 - 数据导出
+
+## 项目结构
+
+```
+drone9/
+├── backend/                # Spring Boot 后端
+│   ├── src/                # 源代码
+│   │   ├── main/java/com/huang/backend/
+│   │   │   ├── auth/       # 认证模块
+│   │   │   ├── config/     # 配置类
+│   │   │   ├── debug/      # 调试工具
+│   │   │   └── ...
+│   │   └── resources/
+│   │       ├── db/migration/ # Flyway 数据库迁移脚本
+│   │       └── ...
+│   └── ...
+├── vue-vben-admin/        # Vue 前端
+├── db/
+│   └── scripts/           # 数据库脚本
+├── docs/                  # 项目文档
+├── scripts/               # 脚本文件
+│   ├── drone-manager.sh   # 主管理脚本
+│   ├── start-dev.sh       # 启动开发环境
+│   └── ...
+├── docker-compose.yml     # Docker 服务配置
+└── drone9.sh              # 主入口脚本
+```
 
 ## 开发指南
 
@@ -137,9 +185,18 @@ npm run dev
 1. 检查数据库连接是否正确
 2. 检查端口是否被占用
 3. 查看日志文件: `backend/logs/drone-management.log`
+4. 使用 `./drone9.sh status` 检查服务状态
 
 ### 前端启动失败
 
 1. 检查Node.js版本
 2. 清除依赖并重新安装: `rm -rf node_modules && npm install`
-3. 检查配置文件中的API路径 
+3. 检查配置文件中的API路径
+
+## 文档
+
+更多文档请查看 `docs/` 目录：
+
+- `auth-implementation-summary.md`: 认证系统实现总结
+- `backend-fix-summary.md`: 后端修复总结
+- `backend-startup-fix-summary.md`: 后端启动问题修复总结 

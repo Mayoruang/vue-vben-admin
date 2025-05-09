@@ -1,8 +1,12 @@
 #!/bin/bash
 
+# 获取脚本所在目录和项目根目录
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+
 # 启动Docker容器
 echo "启动Docker服务..."
-docker-compose up -d postgres influxdb emqx
+cd "$PROJECT_ROOT" && docker-compose up -d postgres influxdb emqx
 
 echo "等待服务启动..."
 sleep 10
@@ -23,4 +27,7 @@ echo "- PostgreSQL: localhost:5432 (用户名:drone, 密码:dronepassword, 数�
 echo "- InfluxDB: http://localhost:8086 (用户名:admin, 密码:influxdb123, 组织:drone_org, Token:my-super-secret-token)"
 echo "- EMQX控制台: http://localhost:18083 (用户名:admin, 密码:public)"
 echo "- 后端API: http://localhost:8080"
-echo "- 前端开发服务器: http://localhost:3100" 
+echo "- 前端开发服务器: http://localhost:3100"
+echo ""
+echo "可以使用以下命令快速查看服务状态:"
+echo "./drone9.sh status" 
