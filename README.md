@@ -25,46 +25,43 @@
 
 ### 环境启动
 
-方式一：使用管理脚本（推荐）
+**推荐启动方式**：
+
+1. 首先，启动基础服务（PostgreSQL, InfluxDB, EMQX）:
 
 ```bash
 # 给脚本添加执行权限
 chmod +x drone9.sh
 
-# 启动所有服务
+# 启动基础服务
 ./drone9.sh start
-
-# 查看服务状态
-./drone9.sh status
-
-# 停止所有服务
-./drone9.sh stop
-
-# 查看所有可用命令
-./drone9.sh help
 ```
 
-方式二：手动启动各组件
-
-1. 启动所有基础服务：
-
-```bash
-docker-compose up -d
-```
-
-2. 启动后端服务：
+2. 手动启动后端:
 
 ```bash
 cd backend
 ./mvnw spring-boot:run
 ```
 
-3. 启动前端服务：
+3. 手动启动前端:
 
 ```bash
 cd vue-vben-admin
-npm install
+npm install   # 首次运行时
 npm run dev
+```
+
+4. 查看服务状态:
+
+```bash
+./drone9.sh status
+```
+
+5. 停止基础服务:
+
+```bash
+./drone9.sh stop
 ```
 
 ### 默认账号
