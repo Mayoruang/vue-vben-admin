@@ -1,13 +1,16 @@
-FROM maven:3.8-openjdk-17
+FROM maven:3.9-eclipse-temurin-17 AS development
 
 WORKDIR /app
 
-# 复制Maven配置
-COPY .mvn/ .mvn/
-COPY mvnw pom.xml ./
+# 复制 Maven 配置文件
+COPY ./pom.xml .
+COPY ./.mvn ./.mvn
+COPY ./mvnw .
+COPY ./mvnw.cmd .
 
-# 设置权限
-RUN chmod +x mvnw
+# 复制源代码
+COPY ./src ./src
 
-# 热启动模式，使用本地源代码
-CMD ["./mvnw", "spring-boot:run", "-Dspring-boot.run.jvmArguments='-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005'"] 
+# Spring Boot 开发模式
+# 使用 spring-boot-devtools 进行热重载
+CMD ["./mvnw", "spring-boot:run", "-Dspring-boot.run.jvmArguments='-XX:TieredStopAtLevel=1 -Xmx1G'"] 

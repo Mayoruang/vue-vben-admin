@@ -1,199 +1,177 @@
-# 无人机管理系统 (Drone Management System)
+# 无人机管理系统
 
-一个功能全面的无人机管理系统，支持无人机监控、数据收集和分析。
+这是一个基于前后端分离架构的无人机管理系统，使用Docker Compose管理基础服务。
 
-## 系统架构
+## 项目架构
 
-系统由以下组件构成：
+### 前端
+- 基于Vue的web-antd应用
+- 位于`vue-vben-admin/apps/web-antd`
+- 通过vite配置代理连接后端
 
-1. **后端服务**：基于Spring Boot的REST API
-2. **前端界面**：基于Vue-vben-admin的管理控制台
-3. **数据存储**：
-   - PostgreSQL：关系型数据（用户、权限、无人机信息等）
-   - InfluxDB：时序数据（无人机遥测数据）
-4. **消息通信**：
-   - EMQX：MQTT消息代理，用于与无人机通信
+### 后端
+- Spring Boot应用
+- 与PostgreSQL、InfluxDB和EMQX进行交互
+- 启动时自动检查服务连接状态
 
-## 快速开始
+### 基础服务（Docker容器）
+- **PostgreSQL**: 存储关系型数据
+- **InfluxDB**: 存储时序数据（如无人机传感器数据）
+- **EMQX**: 消息队列（处理无人机实时通信）
 
-### 前置条件
+## 开发环境设置
 
+### 前提条件
 - Docker 和 Docker Compose
-- Java 17 或更高版本
-- Node.js 16 或更高版本
-- Maven 3.8 或更高版本
+- JDK 17
+- Node.js 和 npm
+- Maven
 
-### 环境启动
+## 开发流程
 
-**推荐启动方式**：
-
-1. 首先，启动基础服务（PostgreSQL, InfluxDB, EMQX）:
+### 1. 启动基础服务
 
 ```bash
-# 给脚本添加执行权限
-chmod +x drone9.sh
-
-# 启动基础服务
-./drone9.sh start
+docker-compose up -d postgres influxdb emqx
 ```
 
-2. 手动启动后端:
+这将启动所有必要的基础服务，但不会启动后端应用容器。
 
+### 2. 启动后端开发环境
+
+后端可以通过两种方式启动：
+
+**方式一：本地直接启动**
 ```bash
 cd backend
 ./mvnw spring-boot:run
 ```
 
-3. 手动启动前端:
+**方式二：使用Docker（开发模式）**
+```bash
+cd backend
+docker build -f Dockerfile.dev -t drone-backend-dev .
+docker run -p 8080:8080 --network="host" drone-backend-dev
+```
+
+后端启动后会自动检查与PostgreSQL、InfluxDB和EMQX的连接。
+
+### 3. 启动前端开发环境
 
 ```bash
-cd vue-vben-admin
-npm install   # 首次运行时
+cd vue-vben-admin/apps/web-antd
+npm install
 npm run dev
 ```
 
-4. 查看服务状态:
+前端配置了两个代理：
+- `/api` - 连接到mock服务，处理登录等功能
+- `/spring` - 连接到SpringBoot后端
 
-```bash
-./drone9.sh status
-```
+## 开发工作流
 
-5. 停止基础服务:
+### 前端开发
+- 修改`vue-vben-admin/apps/web-antd/src`下的文件
+- 对于需要后端的API，使用`/spring/`前缀
+- 对于使用mock服务的功能，使用`/api/`前缀
 
-```bash
-./drone9.sh stop
-```
+### 后端开发
+- 编写Controller、Service等业务逻辑
+- 使用JPA访问PostgreSQL
+- 使用InfluxDB客户端操作时序数据
+- 使用MQTT客户端与EMQX交互
 
-### 默认账号
+## 调试与监控
 
-系统预设了以下测试账号：
+### 后端监控
+- 健康检查：`http://localhost:8080/api/health`
+- Spring Boot Actuator：`http://localhost:8080/actuator`
 
-| 用户名 | 密码 | 角色 |
-|-------|------|------|
-| admin | 123456 | 管理员 |
-| operator | 123456 | 操作员 |
-| guest | 123456 | 访客 |
-| vben | 123456 | 超级管理员 |
+### 数据库访问
+- PostgreSQL：`localhost:5432` (用户名:drone, 密码:dronepassword)
+- InfluxDB管理界面：`http://localhost:8086` (用户名:admin, 密码:influxdb123)
 
-## 主要功能
-
-### 用户管理
-- 用户认证与授权
-- 基于角色的权限控制
-- JWT令牌认证
-
-### 无人机管理
-- 无人机信息管理
-- 实时监控无人机状态
-- 无人机操作控制
-
-### 数据分析
-- 遥测数据收集
-- 数据可视化
-- 数据导出
+### 消息队列
+- EMQX控制面板：`http://localhost:18083` (用户名:admin, 密码:public)
 
 ## 项目结构
 
 ```
-drone9/
-├── backend/                # Spring Boot 后端
-│   ├── src/                # 源代码
-│   │   ├── main/java/com/huang/backend/
-│   │   │   ├── auth/       # 认证模块
-│   │   │   ├── config/     # 配置类
-│   │   │   ├── debug/      # 调试工具
-│   │   │   └── ...
-│   │   └── resources/
-│   │       ├── db/migration/ # Flyway 数据库迁移脚本
-│   │       └── ...
-│   └── ...
-├── vue-vben-admin/        # Vue 前端
-├── db/
-│   └── scripts/           # 数据库脚本
-├── docs/                  # 项目文档
-├── scripts/               # 脚本文件
-│   ├── drone-manager.sh   # 主管理脚本
-│   ├── start-dev.sh       # 启动开发环境
-│   └── ...
-├── docker-compose.yml     # Docker 服务配置
-└── drone9.sh              # 主入口脚本
+.
+├── backend/                  # 后端Spring Boot应用
+│   ├── src/                  # 源代码
+│   ├── Dockerfile.dev        # 开发环境Dockerfile
+│   └── pom.xml               # Maven配置
+├── vue-vben-admin/           # 前端Vue应用
+│   └── apps/
+│       └── web-antd/         # 主前端应用
+├── docker-compose.yml        # Docker Compose配置
+└── README.md                 # 项目文档
 ```
 
-## 开发指南
+## 技术栈
 
-### 后端开发
+### 前端
+- Vue.js
+- Ant Design Vue
+- Vite
 
-后端基于Spring Boot框架开发，主要包含以下模块：
+### 后端
+- Spring Boot 3.2.3
+- Spring Data JPA
+- PostgreSQL
+- InfluxDB
+- MQTT (EMQX)
 
-- `auth`: 认证与授权
-- `drone`: 无人机管理
-- `telemetry`: 遥测数据处理
-- `analysis`: 数据分析
-
-### 前端开发
-
-前端基于Vue-vben-admin，主要包含以下模块：
-
-- 认证管理
-- 无人机管理界面
-- 数据可视化界面
-- 系统管理
-
-## 系统架构图
-
-```
-+---------------+      +-------------+
-|               |      |             |
-|   Frontend    |<---->|   Backend   |
-|  (Vue Admin)  |      | (Spring Boot)|
-|               |      |             |
-+---------------+      +------+------+
-                              |
-                              |
-              +---------------+----------------+
-              |               |                |
-     +--------v-----+  +------v-------+  +-----v------+
-     |              |  |              |  |            |
-     |  PostgreSQL  |  |   InfluxDB   |  |    EMQX    |
-     |  (Relational)|  | (Time-Series)|  |   (MQTT)   |
-     |              |  |              |  |            |
-     +--------------+  +--------------+  +------------+
-```
-
-## API文档
-
-系统API文档可通过以下方式访问：
-
-- Swagger UI: http://localhost:8080/swagger-ui.html
+### 基础设施
+- Docker
+- Docker Compose
 
 ## 健康检查
 
-系统集成了全面的健康检查机制，确保各组件正常工作：
+系统提供了健康检查功能，可以监控所有服务的连接状态：
 
-- 后端健康检查: http://localhost:8080/management/health
-- 数据库连接测试
-- MQTT连接测试
-- InfluxDB连接测试
+```bash
+curl http://localhost:8080/api/health
+```
+
+响应示例：
+```json
+{
+  "status": "UP",
+  "services": {
+    "postgresql": {
+      "service": "PostgreSQL",
+      "status": "UP"
+    },
+    "influxdb": {
+      "service": "InfluxDB",
+      "status": "UP"
+    },
+    "emqx": {
+      "service": "EMQX",
+      "status": "UP"
+    }
+  }
+}
+```
 
 ## 故障排除
 
-### 后端启动失败
+### 后端连接问题
+- 检查Docker容器是否正常运行：`docker ps`
+- 检查环境变量是否正确设置
+- 查看后端日志：`docker logs drone-backend`
 
-1. 检查数据库连接是否正确
-2. 检查端口是否被占用
-3. 查看日志文件: `backend/logs/drone-management.log`
-4. 使用 `./drone9.sh status` 检查服务状态
+### 前端连接问题
+- 检查vite.config.mts中的代理配置
+- 确保后端服务正在运行
+- 检查浏览器控制台是否有错误
 
-### 前端启动失败
+## 贡献指南
 
-1. 检查Node.js版本
-2. 清除依赖并重新安装: `rm -rf node_modules && npm install`
-3. 检查配置文件中的API路径
-
-## 文档
-
-更多文档请查看 `docs/` 目录：
-
-- `auth-implementation-summary.md`: 认证系统实现总结
-- `backend-fix-summary.md`: 后端修复总结
-- `backend-startup-fix-summary.md`: 后端启动问题修复总结 
+1. Fork项目
+2. 创建功能分支：`git checkout -b feature/your-feature`
+3. 提交更改：`git commit -m 'Add some feature'`
+4. 推送到分支：`git push origin feature/your-feature`
+5. 提交Pull Request 
