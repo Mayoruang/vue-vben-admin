@@ -37,16 +37,33 @@ mqtt:
     id: drone-backend
   username: ${MQTT_USERNAME:}
   password: ${MQTT_PASSWORD:}
+  topics:
+    telemetry: drones/+/telemetry
+    commands: drones/+/commands
+    responses: drones/+/responses
+  connection:
+    keepalive: 60
+    timeout: 30
+    auto-reconnect: true
+    clean-session: true
+    max-inflight: 100
 
 # Actuator 配置
 management:
   endpoints:
     web:
       exposure:
-        include: health,info
+        include: health,info,env
   endpoint:
     health:
       show-details: always
   health:
     db:
-      enabled: true 
+      enabled: true
+
+# 日志配置
+logging:
+  level:
+    com.huang: ${LOGGING_LEVEL_COM_HUANG:INFO}
+    org.eclipse.paho: ${LOGGING_LEVEL_PAHO:INFO}
+    org.springframework.web: INFO 

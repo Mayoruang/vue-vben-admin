@@ -9,6 +9,8 @@ import org.springframework.context.annotation.Configuration;
 
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.UUID;
+
 @Slf4j
 @Configuration
 public class MqttConfig {
@@ -17,7 +19,7 @@ public class MqttConfig {
     private String brokerUrl;
 
     @Value("${mqtt.client.id:drone-backend}")
-    private String clientId;
+    private String clientIdPrefix;
 
     @Value("${mqtt.username:#{null}}")
     private String username;
@@ -30,9 +32,11 @@ public class MqttConfig {
         MqttConnectOptions options = new MqttConnectOptions();
         options.setCleanSession(true);
         options.setAutomaticReconnect(true);
-        options.setConnectionTimeout(10);
+        options.setConnectionTimeout(30);
+        options.setKeepAliveInterval(60);
+        options.setMaxInflight(100);
         
-        if (username != null && password != null) {
+        if (username != null && !username.isEmpty() && password != null && !password.isEmpty()) {
             options.setUserName(username);
             options.setPassword(password.toCharArray());
         }
@@ -43,12 +47,15 @@ public class MqttConfig {
     @Bean
     public MqttClient mqttClient(MqttConnectOptions options) {
         try {
+            String clientId = clientIdPrefix + "-" + UUID.randomUUID().toString().substring(0, 8);
+            log.info("创建MQTT客户端: ID={}, Broker={}", clientId, brokerUrl);
+            
             MqttClient client = new MqttClient(brokerUrl, clientId);
             client.connect(options);
             log.info("已连接到 MQTT 代理: {}", brokerUrl);
             return client;
         } catch (MqttException e) {
-            log.error("MQTT 客户端创建失败: {}", e.getMessage());
+            log.error("MQTT 客户端创建失败: {}", e.getMessage(), e);
             throw new RuntimeException("无法创建 MQTT 客户端", e);
         }
     }

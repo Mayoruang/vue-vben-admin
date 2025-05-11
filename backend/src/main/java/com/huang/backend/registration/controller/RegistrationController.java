@@ -1,0 +1,66 @@
+package com.huang.backend.registration.controller;
+
+import com.huang.backend.registration.dto.AdminActionDto;
+import com.huang.backend.registration.dto.AdminActionResponseDto;
+import com.huang.backend.registration.dto.DroneRegistrationRequestDto;
+import com.huang.backend.registration.dto.DroneRegistrationResponseDto;
+import com.huang.backend.registration.dto.RegistrationStatusResponseDto;
+import com.huang.backend.registration.service.RegistrationService;
+import jakarta.validation.Valid;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.UUID;
+
+/**
+ * Controller for handling drone registration requests
+ */
+@RestController
+@RequestMapping("/api/v1")
+public class RegistrationController {
+
+    private final RegistrationService registrationService;
+
+    @Autowired
+    public RegistrationController(RegistrationService registrationService) {
+        this.registrationService = registrationService;
+    }
+
+    /**
+     * Register a new drone
+     * 
+     * @param requestDto the registration request
+     * @return 202 Accepted with registration details
+     */
+    @PostMapping("/drones/register")
+    public ResponseEntity<DroneRegistrationResponseDto> registerDrone(@Valid @RequestBody DroneRegistrationRequestDto requestDto) {
+        DroneRegistrationResponseDto responseDto = registrationService.registerDrone(requestDto);
+        return new ResponseEntity<>(responseDto, HttpStatus.ACCEPTED);
+    }
+    
+    /**
+     * Get the status of a drone registration request
+     * 
+     * @param requestId the ID of the registration request
+     * @return 200 OK with registration status details
+     */
+    @GetMapping("/drones/registration/{requestId}/status")
+    public ResponseEntity<RegistrationStatusResponseDto> getRegistrationStatus(@PathVariable UUID requestId) {
+        RegistrationStatusResponseDto statusDto = registrationService.getRegistrationStatus(requestId);
+        return ResponseEntity.ok(statusDto);
+    }
+    
+    /**
+     * Process an admin action on a registration request (approve or reject)
+     * 
+     * @param actionDto the admin action data
+     * @return 200 OK with action result
+     */
+    @PostMapping("/admin/registrations/action")
+    public ResponseEntity<AdminActionResponseDto> processAdminAction(@Valid @RequestBody AdminActionDto actionDto) {
+        AdminActionResponseDto responseDto = registrationService.processAdminAction(actionDto);
+        return ResponseEntity.ok(responseDto);
+    }
+} 

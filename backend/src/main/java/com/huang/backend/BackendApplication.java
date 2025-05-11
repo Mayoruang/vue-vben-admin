@@ -6,11 +6,13 @@ import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.beans.factory.annotation.Autowired;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 import com.huang.backend.config.ConnectionCheckService;
 
 @Slf4j
 @SpringBootApplication
+@EnableScheduling
 public class BackendApplication {
 
     @Autowired

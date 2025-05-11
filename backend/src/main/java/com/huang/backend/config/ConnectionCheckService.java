@@ -15,6 +15,9 @@ import com.influxdb.client.InfluxDBClient;
 
 import lombok.extern.slf4j.Slf4j;
 
+/**
+ * Service to check connections to external services
+ */
 @Slf4j
 @Service
 public class ConnectionCheckService {
@@ -107,5 +110,25 @@ public class ConnectionCheckService {
                 }
             }
         }
+    }
+
+    /**
+     * Check connection to MQTT broker
+     * 
+     * @return true if connection is successful
+     */
+    public boolean checkMqttConnection() {
+        // Implementation will be added later
+        return true;
+    }
+    
+    /**
+     * Check connection to InfluxDB
+     * 
+     * @return true if connection is successful
+     */
+    public boolean checkInfluxDbConnection() {
+        // Implementation will be added later
+        return true;
     }
 } 

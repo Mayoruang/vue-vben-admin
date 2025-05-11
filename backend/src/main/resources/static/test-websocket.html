@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WebSocket Admin Notifications Test</title>
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1 {
+            color: #333;
+        }
+        #status {
+            padding: 10px;
+            margin: 10px 0;
+            background-color: #f5f5f5;
+            border-radius: 5px;
+        }
+        #notifications {
+            border: 1px solid #ccc;
+            height: 400px;
+            overflow-y: auto;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        .notification {
+            margin: 10px 0;
+            padding: 10px;
+            background-color: #f9f9f9;
+            border-left: 4px solid #666;
+            border-radius: 3px;
+        }
+        .new {
+            border-left-color: #4CAF50;
+        }
+        .update {
+            border-left-color: #2196F3;
+        }
+        .controls {
+            margin: 20px 0;
+        }
+        button {
+            padding: 8px 16px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        #messageInput {
+            padding: 8px;
+            width: 300px;
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>WebSocket Admin Notifications Test</h1>
+    
+    <div id="status">Connection status: <span id="connectionStatus">Disconnected</span></div>
+    
+    <div class="controls">
+        <button id="connectButton">Connect</button>
+        <button id="disconnectButton" disabled>Disconnect</button>
+    </div>
+    
+    <div>
+        <h3>Echo Test</h3>
+        <input type="text" id="messageInput" placeholder="Type a message to echo" />
+        <button id="sendButton" disabled>Send</button>
+    </div>
+    
+    <h3>Drone Registration Notifications</h3>
+    <div id="notifications"></div>
+    
+    <script>
+        let stompClient = null;
+        
+        function connect() {
+            document.getElementById('connectionStatus').textContent = 'Connecting...';
+            
+            // Create SockJS and STOMP client
+            const socket = new SockJS('/ws/admin');
+            stompClient = Stomp.over(socket);
+            
+            // Connect to the server
+            stompClient.connect({}, function(frame) {
+                document.getElementById('connectionStatus').textContent = 'Connected';
+                document.getElementById('connectButton').disabled = true;
+                document.getElementById('disconnectButton').disabled = false;
+                document.getElementById('sendButton').disabled = false;
+                
+                console.log('Connected: ' + frame);
+                
+                // Subscribe to the registration notifications
+                stompClient.subscribe('/topic/registrations', function(message) {
+                    showNotification(JSON.parse(message.body));
+                });
+                
+                // Subscribe to echo topic
+                stompClient.subscribe('/topic/echo', function(message) {
+                    showEcho(message.body);
+                });
+            }, function(error) {
+                document.getElementById('connectionStatus').textContent = 'Error: ' + error;
+                stompClient = null;
+                console.error('Error: ' + error);
+            });
+        }
+        
+        function disconnect() {
+            if (stompClient !== null) {
+                stompClient.disconnect();
+                stompClient = null;
+                document.getElementById('connectionStatus').textContent = 'Disconnected';
+                document.getElementById('connectButton').disabled = false;
+                document.getElementById('disconnectButton').disabled = true;
+                document.getElementById('sendButton').disabled = true;
+                console.log('Disconnected');
+            }
+        }
+        
+        function sendEchoMessage() {
+            const message = document.getElementById('messageInput').value;
+            if (stompClient && message) {
+                stompClient.send('/app/echo', {}, message);
+                document.getElementById('messageInput').value = '';
+            }
+        }
+        
+        function showEcho(message) {
+            const notifications = document.getElementById('notifications');
+            const notification = document.createElement('div');
+            notification.className = 'notification';
+            notification.textContent = message;
+            notifications.appendChild(notification);
+            notifications.scrollTop = notifications.scrollHeight;
+        }
+        
+        function showNotification(notification) {
+            const notifications = document.getElementById('notifications');
+            const notificationDiv = document.createElement('div');
+            
+            // Add appropriate class based on type
+            notificationDiv.className = 'notification ' + 
+                (notification.type === 'NEW_REGISTRATION' ? 'new' : 'update');
+            
+            // Format timestamp
+            const requestTime = new Date(notification.requestedAt).toLocaleString();
+            const processedTime = notification.processedAt ? new Date(notification.processedAt).toLocaleString() : 'N/A';
+            
+            // Build notification content
+            let content = `
+                <strong>Type:</strong> ${notification.type}<br>
+                <strong>Request ID:</strong> ${notification.requestId}<br>
+                <strong>Serial Number:</strong> ${notification.serialNumber}<br>
+                <strong>Model:</strong> ${notification.model}<br>
+                <strong>Status:</strong> ${notification.status}<br>
+                <strong>Requested At:</strong> ${requestTime}<br>
+                <strong>Processed At:</strong> ${processedTime}
+            `;
+            
+            notificationDiv.innerHTML = content;
+            notifications.appendChild(notificationDiv);
+            notifications.scrollTop = notifications.scrollHeight;
+        }
+        
+        // Event listeners
+        document.getElementById('connectButton').addEventListener('click', connect);
+        document.getElementById('disconnectButton').addEventListener('click', disconnect);
+        document.getElementById('sendButton').addEventListener('click', sendEchoMessage);
+        document.getElementById('messageInput').addEventListener('keypress', function(event) {
+            if (event.key === 'Enter') {
+                sendEchoMessage();
+            }
+        });
+    </script>
+</body>
+</html> 
