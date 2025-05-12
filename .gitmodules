@@ -1,6 +1,0 @@
-[submodule "vue-vben-admin"]
-	path = vue-vben-admin
-	url = https://github.com/vbenjs/vue-vben-admin.git 
-[submodule "vue-vben-admin-new"]
-	path = vue-vben-admin-new
-	url = https://github.com/vbenjs/vue-vben-admin.git
