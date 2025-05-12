@@ -36,12 +36,14 @@ Thumbs.db
 
 # Node
 node_modules/
+**/node_modules/
+.pnpm-store/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-.pnpm-debug.log*
-.npm
-.yarn-integrity
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
 
 # Environment variables
 .env
@@ -61,4 +63,17 @@ out/
 # Misc
 .cache/
 .temp/
-.tmp/ 
+.tmp/
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Testing
+coverage/
+.nyc_output/
+
+# Lock files
+backend/drone-backend*-tcplocalhost*/.lck 
