@@ -146,7 +146,7 @@ async function rejectRegistration(record: DroneRegistrationRequest) {
     const action: AdminAction = {
       requestId: record.requestId,
       action: 'REJECT',
-      rejectionReason: rejectReason.value,
+      notes: rejectReason.value,
     };
 
     // 实际项目中替换为真实API调用
