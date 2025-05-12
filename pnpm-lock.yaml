@@ -528,6 +528,16 @@ overrides:
 importers:
 
   .:
+    dependencies:
+      '@ant-design/icons-vue':
+        specifier: ^7.0.1
+        version: 7.0.1(vue@3.5.13(typescript@5.8.3))
+      '@types/sockjs-client':
+        specifier: ^1.5.4
+        version: 1.5.4
+      echarts:
+        specifier: 'catalog:'
+        version: 5.6.0
     devDependencies:
       '@changesets/changelog-github':
         specifier: 'catalog:'
@@ -4415,6 +4425,9 @@ packages:
 
   '@types/resolve@1.20.2':
     resolution: {integrity: sha512-60BCwRFOZCQhDncwQdxxeOEEkbc5dIMccYLwbxsS4TUNeVECQ/pBJ0j09mrHOl/JJvpRPGwO9SvE4nR2Nb/a4Q==}
+
+  '@types/sockjs-client@1.5.4':
+    resolution: {integrity: sha512-zk+uFZeWyvJ5ZFkLIwoGA/DfJ+pYzcZ8eH4H/EILCm2OBZyHH6Hkdna1/UWL/CFruh5wj6ES7g75SvUB0VsH5w==}
 
   '@types/sortablejs@1.15.8':
     resolution: {integrity: sha512-b79830lW+RZfwaztgs1aVPgbasJ8e7AXtZYHTELNXZPsERt4ymJdjV4OccDbHQAvHrCcFpbF78jkm0R6h/pZVg==}
@@ -14120,6 +14133,8 @@ snapshots:
       '@types/node': 22.15.3
 
   '@types/resolve@1.20.2': {}
+
+  '@types/sockjs-client@1.5.4': {}
 
   '@types/sortablejs@1.15.8': {}
 

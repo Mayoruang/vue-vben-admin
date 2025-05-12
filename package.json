@@ -117,5 +117,10 @@
       "canvas",
       "node-gyp"
     ]
+  },
+  "dependencies": {
+    "@ant-design/icons-vue": "^7.0.1",
+    "@types/sockjs-client": "^1.5.4",
+    "echarts": "catalog:"
   }
 }
