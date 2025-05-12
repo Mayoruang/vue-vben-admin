@@ -19,7 +19,10 @@ import { useAuthStore } from '#/store';
 
 import { refreshTokenApi } from './core';
 
+// Get apiURL from env, if not provided, default to '/api'
 const { apiURL } = useAppConfig(import.meta.env, import.meta.env.PROD);
+const DEFAULT_API_URL = '/api';
+const finalApiURL = apiURL ?? DEFAULT_API_URL;
 
 function createRequestClient(baseURL: string, options?: RequestClientOptions) {
   const client = new RequestClient({
@@ -106,8 +109,8 @@ function createRequestClient(baseURL: string, options?: RequestClientOptions) {
   return client;
 }
 
-export const requestClient = createRequestClient(apiURL, {
+export const requestClient = createRequestClient(finalApiURL, {
   responseReturn: 'data',
 });
 
-export const baseRequestClient = new RequestClient({ baseURL: apiURL });
+export const baseRequestClient = new RequestClient({ baseURL: finalApiURL });

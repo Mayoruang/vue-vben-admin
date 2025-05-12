@@ -46,6 +46,6 @@ export async function logoutApi() {
 /**
  * 获取用户权限码
  */
-export async function getAccessCodesApi() {
-  return requestClient.get<string[]>('/auth/codes');
+export async function getAccessCodesApi(username: string) {
+  return requestClient.get<string[]>('/auth/codes', { params: { username } });
 }

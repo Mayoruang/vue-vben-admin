@@ -31,6 +31,15 @@ const routes: RouteRecordRaw[] = [
           title: $t('page.dashboard.workspace'),
         },
       },
+      {
+        name: 'DroneRegistration',
+        path: '/drone-registration',
+        component: () => import('#/views/dashboard/drone-registration/index.vue'),
+        meta: {
+          icon: 'mdi:drone',
+          title: '无人机注册管理',
+        },
+      },
     ],
   },
 ];
