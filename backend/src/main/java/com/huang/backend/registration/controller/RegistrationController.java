@@ -5,9 +5,13 @@ import com.huang.backend.registration.dto.AdminActionResponseDto;
 import com.huang.backend.registration.dto.DroneRegistrationRequestDto;
 import com.huang.backend.registration.dto.DroneRegistrationResponseDto;
 import com.huang.backend.registration.dto.RegistrationStatusResponseDto;
+import com.huang.backend.registration.entity.DroneRegistrationRequest;
 import com.huang.backend.registration.service.RegistrationService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -50,6 +54,24 @@ public class RegistrationController {
     public ResponseEntity<RegistrationStatusResponseDto> getRegistrationStatus(@PathVariable UUID requestId) {
         RegistrationStatusResponseDto statusDto = registrationService.getRegistrationStatus(requestId);
         return ResponseEntity.ok(statusDto);
+    }
+    
+    /**
+     * Get a paginated list of registration requests
+     * 
+     * @param status optional status filter
+     * @param page page number (0-based)
+     * @param size page size
+     * @return 200 OK with paginated registration requests
+     */
+    @GetMapping("/drones/registration/list")
+    public ResponseEntity<Page<RegistrationStatusResponseDto>> getRegistrationList(
+            @RequestParam(required = false) DroneRegistrationRequest.RegistrationStatus status,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        Page<RegistrationStatusResponseDto> registrations = registrationService.getRegistrationList(
+                status, PageRequest.of(page, size, Sort.by("requestedAt").descending()));
+        return ResponseEntity.ok(registrations);
     }
     
     /**

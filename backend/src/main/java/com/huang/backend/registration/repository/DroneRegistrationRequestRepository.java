@@ -1,6 +1,8 @@
 package com.huang.backend.registration.repository;
 
 import com.huang.backend.registration.entity.DroneRegistrationRequest;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -23,6 +25,11 @@ public interface DroneRegistrationRequestRepository extends JpaRepository<DroneR
      * Find requests by status
      */
     List<DroneRegistrationRequest> findByStatus(DroneRegistrationRequest.RegistrationStatus status);
+    
+    /**
+     * Find requests by status with pagination
+     */
+    Page<DroneRegistrationRequest> findByStatus(DroneRegistrationRequest.RegistrationStatus status, Pageable pageable);
     
     /**
      * Check if a request with the given serial number exists

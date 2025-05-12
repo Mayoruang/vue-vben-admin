@@ -14,6 +14,8 @@ import com.huang.backend.registration.entity.DroneRegistrationRequest;
 import com.huang.backend.registration.repository.DroneRegistrationRequestRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -85,7 +87,7 @@ public class RegistrationServiceImpl implements RegistrationService {
         );
         
         // Build the status check URL
-        String statusCheckUrl = baseUrl + "/api/v1/drones/registration/" + savedRequest.getRequestId() + "/status";
+        String statusCheckUrl = baseUrl + "/spring/api/v1/drones/registration/" + savedRequest.getRequestId() + "/status";
         
         // Return the response DTO
         return DroneRegistrationResponseDto.builder()
@@ -167,6 +169,57 @@ public class RegistrationServiceImpl implements RegistrationService {
         
         // Build and return the response DTO
         return responseBuilder.build();
+    }
+    
+    /**
+     * Get a paginated list of registration requests
+     *
+     * @param status optional status filter
+     * @param pageable pagination information
+     * @return a page of registration status responses
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public Page<RegistrationStatusResponseDto> getRegistrationList(DroneRegistrationRequest.RegistrationStatus status, Pageable pageable) {
+        // 根据状态过滤查询
+        Page<DroneRegistrationRequest> requests;
+        if (status != null) {
+            requests = registrationRepository.findByStatus(status, pageable);
+        } else {
+            requests = registrationRepository.findAll(pageable);
+        }
+        
+        // 转换为DTO
+        return requests.map(request -> {
+            // 构建消息
+            String message;
+            switch (request.getStatus()) {
+                case PENDING_APPROVAL:
+                    message = "等待管理员审批";
+                    break;
+                case APPROVED:
+                    message = "已批准，无人机ID: " + request.getDroneId();
+                    break;
+                case REJECTED:
+                    message = "已拒绝" + (request.getAdminNotes() != null ? "，原因: " + request.getAdminNotes() : "");
+                    break;
+                default:
+                    message = "状态: " + request.getStatus();
+                    break;
+            }
+            
+            // 创建DTO
+            return RegistrationStatusResponseDto.builder()
+                    .requestId(request.getRequestId())
+                    .serialNumber(request.getSerialNumber())
+                    .model(request.getModel())
+                    .status(request.getStatus())
+                    .requestedAt(request.getRequestedAt())
+                    .processedAt(request.getProcessedAt())
+                    .droneId(request.getDroneId())
+                    .message(message)
+                    .build();
+        });
     }
     
     /**

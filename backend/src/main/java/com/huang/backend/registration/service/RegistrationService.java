@@ -5,6 +5,9 @@ import com.huang.backend.registration.dto.AdminActionResponseDto;
 import com.huang.backend.registration.dto.DroneRegistrationRequestDto;
 import com.huang.backend.registration.dto.DroneRegistrationResponseDto;
 import com.huang.backend.registration.dto.RegistrationStatusResponseDto;
+import com.huang.backend.registration.entity.DroneRegistrationRequest;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.util.UUID;
 
@@ -29,6 +32,15 @@ public interface RegistrationService {
      * @throws com.huang.backend.exception.ResourceNotFoundException if request not found
      */
     RegistrationStatusResponseDto getRegistrationStatus(UUID requestId);
+    
+    /**
+     * Get a paginated list of registration requests
+     *
+     * @param status optional status filter
+     * @param pageable pagination information
+     * @return a page of registration status responses
+     */
+    Page<RegistrationStatusResponseDto> getRegistrationList(DroneRegistrationRequest.RegistrationStatus status, Pageable pageable);
     
     /**
      * Process an admin action on a registration request

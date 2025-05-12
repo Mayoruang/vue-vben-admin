@@ -15,7 +15,7 @@ import java.util.Map;
  */
 @Slf4j
 @RestController
-@RequestMapping("/api/drones")
+@RequestMapping("/drones") // <--- 修改这里
 @RequiredArgsConstructor
 public class DroneCommandController {
 
@@ -179,4 +179,4 @@ public class DroneCommandController {
             return ResponseEntity.status(503).body(response);
         }
     }
-} 
+}

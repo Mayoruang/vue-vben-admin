@@ -22,6 +22,26 @@ spring:
         format_sql: true
         dialect: org.hibernate.dialect.PostgreSQLDialect
 
+# 应用配置
+application:
+  base-url: ${APPLICATION_BASE_URL:http://localhost:8080}
+  mqtt:
+    broker-url: ${MQTT_BROKER_URL:tcp://localhost:1883}
+  # JWT配置
+  security:
+    jwt:
+      secret-key: ${JWT_SECRET_KEY:a2V5azhzOGtzamhrbHNma2xzZGZsaGtsc2Rob2lzZGx1aXUyOTM0OGlzdWZkaGxzdWRmaGxzZGY=}
+      access-token-expiration: ${JWT_ACCESS_TOKEN_EXPIRATION:31536000000} # 365天 (1年) - 近似永不过期
+      refresh-token-expiration: ${JWT_REFRESH_TOKEN_EXPIRATION:31536000000} # 365天 (1年) - 近似永不过期
+      refresh-token-cookie-name: vben_refresh_token
+  # CORS配置
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:3100,http://localhost:3200,http://localhost:5666,http://localhost:5777}
+    allowed-methods: ${CORS_ALLOWED_METHODS:GET,POST,PUT,DELETE,OPTIONS}
+    allowed-headers: ${CORS_ALLOWED_HEADERS:Authorization,Content-Type,X-Requested-With,Accept}
+    max-age: ${CORS_MAX_AGE:3600}
+    allow-credentials: ${CORS_ALLOW_CREDENTIALS:true}
+
 # InfluxDB 配置
 influxdb:
   url: ${INFLUXDB_URL:http://localhost:8086}

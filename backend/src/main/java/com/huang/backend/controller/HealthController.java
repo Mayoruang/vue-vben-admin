@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.huang.backend.service.HealthService;
 
 @RestController
-@RequestMapping("/api/health")
+@RequestMapping("/health") // <--- 修改这里
 public class HealthController {
 
     @Autowired
@@ -25,4 +25,4 @@ public class HealthController {
         response.put("services", healthService.checkServices());
         return ResponseEntity.ok(response);
     }
-} 
+}
