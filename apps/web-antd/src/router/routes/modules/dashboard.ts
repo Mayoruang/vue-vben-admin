@@ -40,6 +40,15 @@ const routes: RouteRecordRaw[] = [
           title: '无人机注册管理',
         },
       },
+      {
+        name: 'DroneStatus',
+        path: '/drone-status',
+        component: () => import('#/views/dashboard/drone-status/index.vue'),
+        meta: {
+          icon: 'lucide:activity-square',
+          title: '无人机状态监控',
+        },
+      },
     ],
   },
 ];
