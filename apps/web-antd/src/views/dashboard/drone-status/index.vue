@@ -460,7 +460,7 @@ declare global {
       :title="`无人机详情 - ${selectedDrone?.serialNumber || ''}`"
       placement="right"
       :width="500"
-      :visible="drawerVisible"
+      :open="drawerVisible"
       @close="drawerVisible = false"
     >
       <template v-if="selectedDrone">
@@ -611,7 +611,7 @@ declare global {
     <!-- MQTT消息对话框 -->
     <Modal
       title="发送MQTT消息"
-      :visible="mqttModalVisible"
+      :open="mqttModalVisible"
       @ok="sendMqttMessage"
       @cancel="mqttModalVisible = false"
     >

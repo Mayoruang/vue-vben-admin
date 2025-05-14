@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { computed, onMounted, ref, h } from 'vue';
+import { computed, onMounted, ref, h, onUnmounted } from 'vue';
 import { notification, Card, Drawer, Button, Table, Statistic, Space, Tag, Input, Popconfirm } from 'ant-design-vue';
 import { CheckCircleOutlined, CloseCircleOutlined, EyeOutlined, ReloadOutlined } from '@ant-design/icons-vue';
 
@@ -68,16 +68,32 @@ const filteredList = computed(() => {
 async function fetchRegistrationList() {
   loading.value = true;
   try {
-    // 实际项目中替换为真实API调用
-    const response = await fetch('/api/v1/drones/registration/list');
+    // 添加时间戳参数，确保不使用缓存
+    const timestamp = new Date().getTime();
+    // 设置较大的分页大小以获取所有记录
+    const url = `/api/v1/drones/registration/list?size=100&_t=${timestamp}`;
+
+    // 使用实际API端点
+    const response = await fetch(url, {
+      headers: {
+        'Cache-Control': 'no-cache, no-store',
+        'Pragma': 'no-cache'
+      }
+    });
+
     if (!response.ok) {
       throw new Error('获取注册申请列表失败');
     }
     const data = await response.json();
+    // 更新记录列表
     registrationRequests.value = data.content || [];
 
     // 更新统计信息
     updateStatistics();
+
+    // 监控数据获取情况
+    console.log(`获取到 ${registrationRequests.value.length} 条记录，总计 ${data.totalElements} 条`);
+    console.log(`批准: ${statistics.value.approvedCount}, 拒绝: ${statistics.value.rejectedCount}, 待审批: ${statistics.value.pendingCount}`);
   } catch (error) {
     console.error('获取注册申请列表出错:', error);
     notification.error({
@@ -112,7 +128,6 @@ async function approveRegistration(record: DroneRegistrationRequest) {
       action: 'APPROVE',
     };
 
-    // 实际项目中替换为真实API调用
     const response = await fetch('/api/v1/admin/registrations/action', {
       method: 'POST',
       headers: {
@@ -124,6 +139,9 @@ async function approveRegistration(record: DroneRegistrationRequest) {
     if (!response.ok) {
       throw new Error('批准申请失败');
     }
+
+    // 解析响应数据
+    const data = await response.json();
 
     notification.success({
       message: '批准成功',
@@ -137,6 +155,8 @@ async function approveRegistration(record: DroneRegistrationRequest) {
       message: '操作失败',
       description: (error as Error).message,
     });
+    // 操作失败也刷新列表以确保显示正确状态
+    await fetchRegistrationList();
   }
 }
 
@@ -149,7 +169,6 @@ async function rejectRegistration(record: DroneRegistrationRequest) {
       notes: rejectReason.value,
     };
 
-    // 实际项目中替换为真实API调用
     const response = await fetch('/api/v1/admin/registrations/action', {
       method: 'POST',
       headers: {
@@ -161,6 +180,9 @@ async function rejectRegistration(record: DroneRegistrationRequest) {
     if (!response.ok) {
       throw new Error('拒绝申请失败');
     }
+
+    // 解析响应数据
+    const data = await response.json();
 
     notification.success({
       message: '拒绝成功',
@@ -177,6 +199,8 @@ async function rejectRegistration(record: DroneRegistrationRequest) {
       message: '操作失败',
       description: (error as Error).message,
     });
+    // 操作失败也刷新列表以确保显示正确状态
+    await fetchRegistrationList();
   }
 }
 
@@ -276,45 +300,35 @@ const columns = [
   },
 ];
 
-// 模拟WebSocket连接
+// 模拟WebSocket连接 - 现在完全禁用，仅使用轮询
 function setupWebSocket() {
-  console.log('WebSocket连接已建立，等待实时无人机注册请求...');
-  // 实际项目中替换为真实WebSocket实现
-  // const ws = new WebSocket('ws://your-backend-url/ws/registrations');
-  // ws.onmessage = (event) => {
-  //   const data = JSON.parse(event.data);
-  //   // 处理新的注册请求
-  //   if (data.type === 'NEW_REGISTRATION') {
-  //     // 添加到列表并更新统计
-  //     registrationRequests.value = [data.registration, ...registrationRequests.value];
-  //     updateStatistics();
-  //
-  //     // 通知
-  //     notification.info({
-  //       message: '新注册申请',
-  //       description: `收到新的无人机注册申请，序列号: ${data.registration.serialNumber}`,
-  //     });
-  //   }
-  // };
-  //
-  // ws.onerror = (error) => {
-  //   console.error('WebSocket error:', error);
-  // };
-  //
-  // return ws;
+  console.log('WebSocket已禁用，仅使用轮询方式更新数据');
+  return null;
 }
+
+// 设置定时刷新数据
+let refreshTimer: number | null = null;
 
 // 生命周期钩子
 onMounted(() => {
+  // 立即获取数据
   fetchRegistrationList();
-  const ws = setupWebSocket();
+
+  // 禁用WebSocket，仅使用轮询
+  const ws = null;
+
+  // 设置较短的轮询间隔（10秒）
+  const refreshInterval = 10000;
+  refreshTimer = window.setInterval(() => {
+    fetchRegistrationList();
+  }, refreshInterval);
 
   // 清理
-  // onUnmounted(() => {
-  //   if (ws && ws.readyState === WebSocket.OPEN) {
-  //     ws.close();
-  //   }
-  // });
+  onUnmounted(() => {
+    if (refreshTimer) {
+      clearInterval(refreshTimer);
+    }
+  });
 });
 </script>
 
@@ -428,7 +442,7 @@ onMounted(() => {
       title="无人机注册申请详情"
       placement="right"
       :width="500"
-      :visible="drawerVisible"
+      :open="drawerVisible"
       @close="drawerVisible = false"
       :footer-style="{ textAlign: 'right' }"
     >
