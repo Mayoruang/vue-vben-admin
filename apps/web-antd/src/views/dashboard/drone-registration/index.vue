@@ -1,14 +1,26 @@
 <script lang="ts" setup>
 import { computed, onMounted, ref, h, onUnmounted } from 'vue';
 import { notification, Card, Drawer, Button, Table, Statistic, Space, Tag, Input, Popconfirm } from 'ant-design-vue';
-import { CheckCircleOutlined, CloseCircleOutlined, EyeOutlined, ReloadOutlined } from '@ant-design/icons-vue';
+import { CheckCircleOutlined, CloseCircleOutlined, EyeOutlined, ReloadOutlined, DeleteOutlined } from '@ant-design/icons-vue';
+import { Map } from 'ol';
+import { fromLonLat } from 'ol/proj';
+import View from 'ol/View';
+import TileLayer from 'ol/layer/Tile';
+import VectorLayer from 'ol/layer/Vector';
+import VectorSource from 'ol/source/Vector';
+import OSM from 'ol/source/OSM';
+import Feature from 'ol/Feature';
+import Point from 'ol/geom/Point';
+import { Icon, Style } from 'ol/style';
+import SockJS from 'sockjs-client';
+import Stomp from 'webstomp-client';
 
 // 定义无人机注册请求类型
 interface DroneRegistrationRequest {
   requestId: string;
   serialNumber: string;
   model: string;
-  status: 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED';
+  status: 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED' | 'DELETED';
   requestedAt: string;
   processedAt?: string;
   adminNotes?: string;
@@ -19,7 +31,7 @@ interface DroneRegistrationRequest {
 interface AdminAction {
   requestId: string;
   action: 'APPROVE' | 'REJECT';
-  notes?: string;
+  rejectionReason?: string;
 }
 
 // 状态统计
@@ -128,16 +140,30 @@ async function approveRegistration(record: DroneRegistrationRequest) {
       action: 'APPROVE',
     };
 
+    // 获取保存在localStorage中的token
+    const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+
     const response = await fetch('/api/v1/admin/registrations/action', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        // 如果有token则添加到请求头
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
       },
       body: JSON.stringify(action),
     });
 
+    console.log('批准请求状态:', response.status);
+
     if (!response.ok) {
-      throw new Error('批准申请失败');
+      let errorMessage = `批准申请失败: ${response.status} ${response.statusText}`;
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.message || errorMessage;
+      } catch (e) {
+        // 如果无法解析JSON，使用默认错误消息
+      }
+      throw new Error(errorMessage);
     }
 
     // 解析响应数据
@@ -151,6 +177,7 @@ async function approveRegistration(record: DroneRegistrationRequest) {
     // 刷新列表
     await fetchRegistrationList();
   } catch (error) {
+    console.error('批准申请出错:', error);
     notification.error({
       message: '操作失败',
       description: (error as Error).message,
@@ -166,19 +193,33 @@ async function rejectRegistration(record: DroneRegistrationRequest) {
     const action: AdminAction = {
       requestId: record.requestId,
       action: 'REJECT',
-      notes: rejectReason.value,
+      rejectionReason: rejectReason.value,
     };
+
+    // 获取保存在localStorage中的token
+    const token = localStorage.getItem('token') || sessionStorage.getItem('token');
 
     const response = await fetch('/api/v1/admin/registrations/action', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        // 如果有token则添加到请求头
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
       },
       body: JSON.stringify(action),
     });
 
+    console.log('拒绝请求状态:', response.status);
+
     if (!response.ok) {
-      throw new Error('拒绝申请失败');
+      let errorMessage = `拒绝申请失败: ${response.status} ${response.statusText}`;
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.message || errorMessage;
+      } catch (e) {
+        // 如果无法解析JSON，使用默认错误消息
+      }
+      throw new Error(errorMessage);
     }
 
     // 解析响应数据
@@ -195,6 +236,7 @@ async function rejectRegistration(record: DroneRegistrationRequest) {
     // 刷新列表
     await fetchRegistrationList();
   } catch (error) {
+    console.error('拒绝申请出错:', error);
     notification.error({
       message: '操作失败',
       description: (error as Error).message,
@@ -300,11 +342,106 @@ const columns = [
   },
 ];
 
-// 模拟WebSocket连接 - 现在完全禁用，仅使用轮询
-function setupWebSocket() {
-  console.log('WebSocket已禁用，仅使用轮询方式更新数据');
-  return null;
-}
+// 地图相关变量
+const map = ref<Map | null>(null);
+const droneLayer = ref<VectorLayer<VectorSource> | null>(null);
+const droneFeatures = ref<Record<string, Feature>>({});
+
+// WebSocket相关变量
+const stompClient = ref<any>(null);
+const connected = ref(false);
+
+// 初始化地图
+const initMap = () => {
+  // 创建矢量图层源和图层
+  const vectorSource = new VectorSource();
+  const vectorLayer = new VectorLayer({
+    source: vectorSource,
+  });
+  droneLayer.value = vectorLayer;
+
+  // 创建地图实例
+  map.value = new Map({
+    target: 'map',
+    layers: [
+      new TileLayer({
+        source: new OSM(),
+      }),
+      vectorLayer,
+    ],
+    view: new View({
+      center: fromLonLat([116.3, 39.9]), // 默认北京中心
+      zoom: 12,
+    }),
+  });
+};
+
+// 创建无人机标记样式
+const createDroneStyle = (status: string) => {
+  return new Style({
+    image: new Icon({
+      src: '/drone-icon.png',
+      scale: 0.5,
+      color: status === 'ONLINE' ? '#4CAF50' : '#9E9E9E',
+    }),
+  });
+};
+
+// 更新无人机位置
+const updateDronePositions = (positions: any[]) => {
+  if (!droneLayer.value) return;
+  const source = droneLayer.value.getSource();
+  if (!source) return;
+
+  positions.forEach((pos) => {
+    if (pos.latitude && pos.longitude) {
+      const coordinates = fromLonLat([pos.longitude, pos.latitude]);
+
+      let feature = droneFeatures.value[pos.droneId];
+      if (feature) {
+        // 更新现有标记
+        const point = feature.getGeometry() as Point;
+        point.setCoordinates(coordinates);
+      } else {
+        // 创建新标记
+        feature = new Feature({
+          geometry: new Point(coordinates),
+          properties: {
+            droneId: pos.droneId,
+          },
+        });
+        feature.setStyle(createDroneStyle('ONLINE'));
+        droneFeatures.value[pos.droneId] = feature;
+        source.addFeature(feature);
+      }
+    }
+  });
+};
+
+// 连接WebSocket
+const connectWebSocket = () => {
+  const socket = new SockJS('/ws/drones');
+  stompClient.value = Stomp.over(socket);
+
+  stompClient.value.connect(
+    {},
+    () => {
+      connected.value = true;
+      // 订阅无人机位置更新
+      stompClient.value.subscribe('/topic/drones/positions', (message: any) => {
+        const positions = JSON.parse(message.body);
+        updateDronePositions(positions);
+      });
+    },
+    (error: any) => {
+      console.error('WebSocket连接错误:', error);
+      notification.error({
+        message: '无法连接到实时位置服务',
+      });
+      connected.value = false;
+    }
+  );
+};
 
 // 设置定时刷新数据
 let refreshTimer: number | null = null;
@@ -314,8 +451,9 @@ onMounted(() => {
   // 立即获取数据
   fetchRegistrationList();
 
-  // 禁用WebSocket，仅使用轮询
-  const ws = null;
+  // 初始化地图
+  initMap();
+  connectWebSocket();
 
   // 设置较短的轮询间隔（10秒）
   const refreshInterval = 10000;
@@ -328,8 +466,89 @@ onMounted(() => {
     if (refreshTimer) {
       clearInterval(refreshTimer);
     }
+    if (stompClient.value) {
+      stompClient.value.disconnect();
+    }
+    if (map.value) {
+      map.value.dispose();
+    }
   });
 });
+
+// 删除无人机
+async function deleteDrone(record: DroneRegistrationRequest) {
+  try {
+    // 使用测试API端点
+    return await deleteWithAlternativeAPI(record);
+  } catch (error) {
+    console.error('删除无人机出错:', error);
+    notification.error({
+      message: '删除失败',
+      description: (error as Error).message,
+    });
+  }
+}
+
+// 使用替代API端点删除无人机
+async function deleteWithAlternativeAPI(record: DroneRegistrationRequest) {
+  // 确保有droneId
+  if (!record.droneId) {
+    notification.error({
+      message: '无法删除',
+      description: '无人机ID不存在',
+    });
+    throw new Error('无人机ID不存在');
+  }
+
+  // 使用GET方法的测试API
+  const response = await fetch(`/api/v1/drones/test/delete/${record.droneId}`, {
+    method: 'GET'
+  });
+
+  if (!response.ok) {
+    let errorMessage = `删除失败: ${response.status} ${response.statusText}`;
+    try {
+      const errorData = await response.json();
+      errorMessage = errorData.message || errorMessage;
+    } catch (e) {
+      // 如果无法解析JSON，使用默认错误消息
+    }
+    throw new Error(errorMessage);
+  }
+
+  const data = await response.json();
+
+  if (data.success) {
+    notification.success({
+      message: '删除成功',
+      description: `已成功删除序列号为 ${record.serialNumber} 的无人机`,
+    });
+
+    // 更新本地列表中的注册记录状态
+    const index = registrationRequests.value.findIndex(item => item.requestId === record.requestId);
+    if (index !== -1) {
+      const updatedRecord = registrationRequests.value[index];
+      if (updatedRecord) {
+        updatedRecord.status = 'DELETED' as const;
+        updatedRecord.droneId = undefined;
+      }
+    }
+
+    // 关闭抽屉
+    drawerVisible.value = false;
+
+    // 重新获取列表数据
+    await fetchRegistrationList();
+
+    return data;
+  } else {
+    notification.error({
+      message: '删除失败',
+      description: data.message || '未知错误',
+    });
+    throw new Error(data.message || '未知错误');
+  }
+}
 </script>
 
 <template>
@@ -505,6 +724,23 @@ onMounted(() => {
               </Button>
             </div>
           </Space>
+        </div>
+
+        <div v-if="selectedDrone.status === 'APPROVED' && selectedDrone.droneId" class="mt-4">
+          <h3 class="font-medium mb-2">管理操作</h3>
+          <Popconfirm
+            title="确定要删除该无人机吗?"
+            description="删除后将无法恢复，无人机将从系统中永久移除"
+            @confirm="deleteDrone(selectedDrone)"
+            okText="确定"
+            cancelText="取消"
+            okType="danger"
+          >
+            <Button danger block>
+              <template #icon><DeleteOutlined /></template>
+              删除无人机
+            </Button>
+          </Popconfirm>
         </div>
       </div>
       <template #footer>
